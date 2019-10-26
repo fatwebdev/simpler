@@ -10,12 +10,26 @@ module Simpler
     end
 
     def render(binding)
-      template = File.read(template_path)
-
-      ERB.new(template).result(binding)
+      case render_as
+      when :plain
+        render_arg
+      when :inline
+        ERB.new(render_arg).result(binding)
+      else
+        template = File.read(template_path)
+        ERB.new(template).result(binding)
+      end
     end
 
     private
+
+    def render_as
+      @env['simpler.render_as']
+    end
+
+    def render_arg
+      @env['simpler.render_arg']
+    end
 
     def controller
       @env['simpler.controller']

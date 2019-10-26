@@ -2,6 +2,11 @@ require_relative 'view'
 
 module Simpler
   class Controller
+    HEADERS = {
+      plain: 'text/plain',
+      html: 'text/html',
+      inline: 'text/html'
+    }.freeze
 
     attr_reader :name, :request, :response
 
@@ -15,9 +20,9 @@ module Simpler
       @request.env['simpler.controller'] = self
       @request.env['simpler.action'] = action
 
-      set_default_headers
       send(action)
       write_response
+      set_default_headers
 
       @response.finish
     end
@@ -29,7 +34,11 @@ module Simpler
     end
 
     def set_default_headers
-      @response['Content-Type'] = 'text/html'
+      @response['Content-Type'] = HEADERS[render_as || :html]
+    end
+
+    def render_as
+      @request.env['simpler.render_as']
     end
 
     def write_response
@@ -46,8 +55,15 @@ module Simpler
       @request.params
     end
 
-    def render(template)
-      @request.env['simpler.template'] = template
+    def render(*template, **options)
+      render_options = options.select { |k, _v| %i[inline plain].include?(k) }
+
+      if render_options.empty?
+        @request.env['simpler.template'] = template.first
+      else
+        @request.env['simpler.render_as'] = render_options.keys.first
+        @request.env['simpler.render_arg'] = render_options.values.first
+      end
     end
 
   end
